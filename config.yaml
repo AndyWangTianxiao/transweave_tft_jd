@@ -1,0 +1,239 @@
+# TransWeave-Finance config
+# All hyperparameters read from here. No hardcoding in code.
+# Order: Stage 1 → 2 → 3 → 4 → 5 → 6 → 7; within Stage 6: shared → Phase 3 → Phase 4.
+
+# Paths (relative to project root)
+paths:
+  raw_ohlcv: "data/raw/ohlcv"
+  raw_onchain: "data/raw/onchain"
+  processed: "data/processed"
+  processed_onchain: "data/processed/onchain"
+  features: "data/features"
+  checkpoints: "experiments/checkpoints"
+
+# Stage 1: Data pipeline
+stage1:
+  # Time range for OHLCV
+  start_date: "2022-01-01"
+  end_date: "2025-06-30"
+
+  # Assets: ETH (source), BTC/SOL/DOGE (targets)
+  # Kraken uses ETH/USD if no USDT; okx/kucoin use USDT
+  assets:
+    ETH: "ETH/USDT"   # Kraken: ETH/USDT or ETH/USD
+    BTC: "BTC/USDT"
+    SOL: "SOL/USDT"
+    DOGE: "DOGE/USDT"
+
+  # ccxt fetcher
+  # If Binance returns HTTP 451 (region blocked), switch to: kraken, okx, or kucoin
+  fetcher:
+    exchange: "binance"
+    timeframe: "1m"
+    limit_per_request: 1000  # ccxt default max for 1min
+    sleep_seconds: 1
+    timeout_ms: 60000        # 60s read timeout (VPN/slow network)
+    max_retries: 5           # retries on RequestTimeout
+
+  # Train / val / test split
+  train_end: "2024-09-30"
+  val_end: "2025-03-31"
+  test_end: "2025-06-30"
+
+  # TFT feature config
+  window: 96       # 96 * 15min = 24h
+  horizon: 1
+  n_features: 14   # X_hist last dim: price/volume 10 + onchain 4
+
+  # Rolling z-score for onchain (168h = 1 week)
+  onchain_zscore_window: 168
+
+  # Jump detection: |r| > 3 * sigma_rolling
+  jump_sigma_threshold: 3
+  jump_vol_window_hours: 24  # rolling vol window in hours
+
+  # Dune API (query_ids from Dune; set DUNE_API_KEY env var)
+  dune:
+    queries:
+      ETH:
+        - { query_id: 6734018, out_file: eth_active_addresses_hourly.csv, desc: "ETH active addresses" }
+        - { query_id: 6734024, out_file: eth_avg_gas_gwei_hourly.csv, desc: "ETH avg gas" }
+        - { query_id: 6734028, out_file: eth_whale_transfers_hourly.csv, desc: "ETH whale transfers" }
+        - { query_id: 6734086, out_file: eth_dex_volume_smart_hourly.csv, desc: "ETH dex volume smart" }
+      BTC:
+        - { query_id: 6734093, out_file: btc_active_addresses_hourly.csv, desc: "BTC active addresses" }
+        - { query_id: 6734097, out_file: btc_whale_transfers_hourly.csv, desc: "BTC whale (WBTC proxy)" }
+      SOL:
+        - { query_id: 6734332, out_file: sol_whale_dex_hourly.csv, desc: "SOL whale + dex volume" }
+        - { query_id: 6734294, out_file: sol_tx_fee_hourly.csv, desc: "SOL tx+fee Y1", merge_key: sol_tx_fee }
+        - { query_id: 6734524, out_file: sol_tx_fee_hourly.csv, desc: "SOL tx+fee Y2", merge_key: sol_tx_fee }
+        - { query_id: 6734530, out_file: sol_tx_fee_hourly.csv, desc: "SOL tx+fee Y3", merge_key: sol_tx_fee }
+      DOGE:
+        - { query_id: 6734377, out_file: doge_active_addresses_hourly.csv, desc: "DOGE active (DEX)" }
+        - { query_id: 6734381, out_file: doge_whale_transfers_hourly.csv, desc: "DOGE whale count" }
+        - { query_id: 6734386, out_file: doge_dex_volume_smart_hourly.csv, desc: "DOGE dex volume" }
+
+# Stage 2: Static MAP (doc/stage2_jd.md)
+# Per-bar jump probability p = λΔt: logit(p) ~ N(logit(p_center), scale_p^2)
+# Jump size ratio κ = σ_J/(σ√Δt): log(κ) ~ N(log(κ_center), scale_κ^2)
+# p_center_source: "config" (use p_center) | "empirical" (from estimate_jump_prior.py)
+static_jd_map:
+  p_center_source: "empirical"  # reads {asset}_empirical_jump_params.json per asset
+  p_center: 0.002       # ~70 jumps/year; ignored when p_center_source=empirical
+  scale_p: 1.0          # logit scale
+  kappa_center: 10.0    # jumps ~10x per-bar diffusion noise
+  scale_kappa: 0.5      # log scale
+  prior_weight: 5000    # penalty strength (prior_weight * neg_log_prior)
+
+# Training (shared: Stage 2 JD, Stage 3 TFT-JD)
+training:
+  lr: 1.0e-3
+  epochs: 100
+  batch_size: 64
+  jd_truncation_n: 10
+  seed: 42
+  # Stage 2: annualized JD (15min bars)
+  bars_per_year: 35040   # 365 * 24 * 4
+  loss_alpha: 1.0        # NLL + alpha * CRPS (formula 7)
+  loss_beta: 0.1         # + beta * R
+  crps_mc_samples: 200   # Monte Carlo samples for CRPS (no closed form for JD)
+
+# Stage 3: TFT-JD (see doc/stage3_tft.md)
+tft_jd:
+  hidden_size: 64
+  attention_heads: 4
+  hidden_continuous_size: 32
+  dropout: 0.15
+  softplus_eps: 1.0e-4
+  mu_j_scale: 0.06
+  lambda_max: 35040
+  batch_size: 128
+  lr: 3.0e-4
+  weight_decay: 1.0e-3
+  grad_clip: 1.0
+  early_stopping_patience: 15
+  early_stopping_monitor: val_nll
+  loss_alpha_target_ratio: 0.2
+  loss_beta: 1.0e-3
+  nll_phase_ratio: 0.6       # 0.5 or 0.4 to enter Phase 2 earlier (doc/stage3_tft.md)
+  nll_clamp_sigma: 5.0
+  head_bias_from_map: true
+  head_weight_std: 1.0e-3
+  head_warmup_epochs: 3
+  lambda_prior_weight: 0.05   # soft prior: pull λ toward MAP ~107; ~1-5% of L_JD
+  lambda_prior_center: null    # null = read from eth_static_jd_params.json
+
+# Stage 4: Behavioral weakness (see doc/stage4_beha.md)
+# Prospect theory (paper Section 6.2)
+prospect_theory:
+  delta: 0.69
+  alpha: 0.88
+  beta: 0.88
+  lambda_loss: 2.25
+
+# Risk (crypto)
+risk:
+  gamma: 7.0
+  cvar_alpha: 0.05
+
+weakness:
+  use_weakness: true
+  lambda_weak: 0.3           # weakness reg weight; tune so L_weakness ~1%-10% of L_JD (verify Step 0)
+  alpha_dim: 0.001           # dim_eff weight (mainly for monitoring)
+  w_pt_eps: 1.0e-8           # batch-max normalization eps
+  cvar_method: "analytic"    # "analytic" (training) or "mc" (validation)
+  cvar_mc_samples: 5000      # MC samples (validation only)
+  cvar_alpha: 0.05           # CVaR confidence level
+  cvar_convention: "loss"    # loss convention: positive = high risk
+
+# Stage 5: Regime + transfer metrics (doc/stage5_regime.md)
+transfer:
+  hmm_n_states_fixed: 4   # Fixed state count; Eq. 13/22 require consistent dimensionality; no BIC selection
+  hmm_downsample_factor: 4  # 15min -> 1h; used by PCA mode and legacy (regime.py)
+  hmm_max_samples: 24000
+  hmm_n_iter: 100
+  hmm_covariance_type: "full"
+  hmm_n_init: 5
+  hmm_random_states: [42, 123, 456, 789, 2024]
+  hmm_smooth_eps: 1.0e-6
+  rv_transform: "log"
+  w_jd_method: "euclidean"
+  rho_reject: 0.3
+  rho_full: 0.7
+  rho_partial: 0.5
+  delta_wpt_full: 0.1
+  spectral_delta: 0.05
+  spectral_n: 96288
+  time_transform_ratio_threshold: 0.5
+  readiness_threshold: 0.5
+  rho_regime_threshold: 0.5
+  weakness_consistency_threshold: 0.2
+  # Stage 5 adjustment (doc/stage5_regime.md Section 10)
+  hmm_scaler_mode: "global"       # "per_asset" | "global" | "eth_anchor"
+  rho_exclude_stationary: true    # exclude λ=1 eigenvector in ρ_regime
+  s_tiebreaker_threshold: 0.5    # full but S < 0.5 → downgrade to partial (Section 6.1)
+  use_s_adjusted_in_decision: false  # D_H not in paper; S' diagnostic only
+  d_h_w_h: 1.5                      # S' formula (diagnostic only)
+  # Rolling (v3: 30 days): W_JD + W_PT both use rolling windows, no burstiness
+  rolling_window_bars: 2880       # 30 days at 15min (96*30)
+  rolling_stride_bars: 2880      # non-overlapping
+  # M4: HMM full-feature PCA (doc/stage5_regime.md)
+  hmm_feature_mode: "pca"        # "pca" | "legacy"
+  hmm_missing_threshold: 0.5     # drop cols with missing > 50%
+  pca_variance_target: 0.85      # PCA explain >= 85% variance
+  pca_max_components: 6
+  # v3: W_crit = 2√(σ̄²+λ̄) paper original (doc/stage5_regime.md)
+
+# Stage 6: TransWeave transfer map (doc/stage6_transfer.md Section 9)
+# Weak target model (prerequisite for Phase 3)
+weak_model_prior:
+  p_center: 0.002       # same as static_jd_map
+  scale_p: 1.0
+  kappa_center: 10.0
+  scale_kappa: 0.5
+  prior_weight: 0.1     # per-sample weight (much smaller than static MLE's 5000 sum-based weight)
+
+transfer_map:
+  # Architecture & shared
+  hidden_dim: 64
+  batch_size: 2048
+
+  # Weak model (SimpleJDModel for θ^b)
+  weak_model_hidden: 32
+  weak_model_epochs: 100
+  weak_model_patience: 10
+  weak_model_lr: 1.0e-3
+
+  # L_JD CRPS weight (formula 48)
+  loss_alpha_crps: 1.0
+
+  # Phase 3: learn T
+  phase3_lr: 1.0e-3
+  phase3_epochs: 50
+  phase3_patience: 10   # early stop on val_unified (val_nll + λ_wpt·val_weak)
+  lambda_ent: 0.01
+  lambda_wpt: 0.1           # Phase 3 L_weakness weight (all modes; leave room for Phase 4 fine-tune)
+  lambda_tw: 0.1        # L_TransWeave weight — Full mode (Phase 3 & 4)
+  partial_lambda_tw: 0.05   # Partial: lower BD intertwine weight (ρ_regime 0.5–0.7)
+  weak_lambda_tw: 0.025      # Weak: minimal BD intertwine weight (ρ_regime < 0.5)
+
+  # Phase 4: finetune T on target
+  phase4_lambda_wpt: 1.0    # Phase 4 L_weakness weight (all modes)
+  phase4_l2_anchor: 50.0   # L2 penalty toward Phase 3 weights (prevents drift; increase→tighter, decrease→freer)
+  phase4_clamp_sigma: 5.0   # nll_clamped threshold for Phase 4 (mirrors tft_jd.nll_clamp_sigma)
+  phase4_grad_clip: 1.0     # default grad clip for Phase 4
+  phase4_grad_clip_partial: 0.1   # partial mode: tighter clip to prevent first-step divergence
+  full_lr: 5.0e-5            # fine-tune lr (10x smaller than Phase 3)
+  full_epochs: 50
+  full_patience: 10
+  partial_lr: 1.0e-5         # partial: more conservative lr (SOL/DOGE gradient conflict)
+  partial_epochs: 50
+  partial_patience: 10
+  weak_lr: 5.0e-5              # weak mode slightly higher lr (more freedom)
+  weak_epochs: 50
+  weak_patience: 10
+
+# Stage 7 unified framework (doc/stage7_unify.md). Pipeline orchestration only.
+# lambda_TW, lambda_weak etc. are in transfer_map and weakness; unified does not duplicate them.
+unified:
+  stage3_parallel: true   # Stage 3: run scratch+finetune in parallel (1-2 layout); set false if single GPU OOM

@@ -1,0 +1,19 @@
+{
+  "lambda_bns": 235.80657791699295,
+  "lambda_lee_mykland": 44.58888018794049,
+  "lambda_mean": 247.43043767910507,
+  "lambda_lo": 109.22925014076692,
+  "lambda_hi": 244.47908081244952,
+  "lambda_recommended": 140.1977290524667,
+  "p_center_recommended": 0.004001076742364918,
+  "n_jump_days_bns": 825,
+  "n_jumps_lee_mykland": 156,
+  "years": 3.4962069358886607,
+  "n_bars": 122592,
+  "bars_per_year": 35040,
+  "lambda_threshold": {
+    "3.0": 603.0483993373755,
+    "4.0": 244.47908081244952,
+    "5.0": 109.22925014076692
+  }
+}

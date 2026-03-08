@@ -1,0 +1,30 @@
+# Raw data (too large, rebuild via Stage 1)
+data/raw/
+data/processed/
+
+# Internal / non-English (keep repo minimal and English-only)
+.claude/
+.cursorrules
+doc/
+docs/
+config_backup*.yaml
+old_code/
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+run_full_pipeline.log

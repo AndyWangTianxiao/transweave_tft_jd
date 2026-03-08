@@ -1,0 +1,57 @@
+{
+  "stage_status": {
+    "3": "run",
+    "5": "run",
+    "6": "run"
+  },
+  "checkpoints": {},
+  "stage6_results_count": 3,
+  "diagnostics_path": "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/unified_diagnostics.json",
+  "run_timestamp": "2026-03-08T01:25:38.428324",
+  "stages_run": [
+    3,
+    5,
+    6
+  ],
+  "mode": "force",
+  "output_paths": {
+    "stage2": "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/eth_static_jd_params.json",
+    "stage3_ckpts": [
+      "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/eth_tft_jd.ckpt",
+      "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/eth_tft_jd_w_scratch.ckpt",
+      "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/eth_tft_jd_w_finetune.ckpt"
+    ],
+    "stage5": "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/stage5_transfer_report.json",
+    "stage6": "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/stage6_experiment_results.json",
+    "diagnostics": "/Users/tianxiaowang/Desktop/Finance and AGI/code/experiments/checkpoints/unified_diagnostics.json"
+  },
+  "stage6_per_target": [
+    {
+      "target": "BTC",
+      "decision": "full",
+      "scratch_nll": -4.787601404053964,
+      "transweave_nll": -4.859865299172082,
+      "direct_nll": -4.746273862447115,
+      "phase3_epochs": 50,
+      "phase4_epochs": 10
+    },
+    {
+      "target": "SOL",
+      "decision": "partial",
+      "scratch_nll": -4.176997001042757,
+      "transweave_nll": -4.141790573806109,
+      "direct_nll": -4.040919893418859,
+      "phase3_epochs": 46,
+      "phase4_epochs": 19
+    },
+    {
+      "target": "DOGE",
+      "decision": "partial",
+      "scratch_nll": -4.03817914170343,
+      "transweave_nll": -4.0840883391367235,
+      "direct_nll": -3.8498319920912523,
+      "phase3_epochs": 29,
+      "phase4_epochs": 14
+    }
+  ]
+}

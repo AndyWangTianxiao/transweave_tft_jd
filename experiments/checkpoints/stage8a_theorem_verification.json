@@ -1,0 +1,39 @@
+{
+  "pairs": [
+    {
+      "target": "BTC",
+      "condition_1_w_jd": true,
+      "condition_2_rho": true,
+      "condition_3_spectral": true,
+      "all_conditions": true,
+      "transweave_success": true,
+      "scratch_nll": -4.787601404053964,
+      "transweave_nll": -4.859865299172082
+    },
+    {
+      "target": "SOL",
+      "condition_1_w_jd": true,
+      "condition_2_rho": true,
+      "condition_3_spectral": true,
+      "all_conditions": true,
+      "transweave_success": false,
+      "scratch_nll": -4.176997001042757,
+      "transweave_nll": -4.141790573806109
+    },
+    {
+      "target": "DOGE",
+      "condition_1_w_jd": true,
+      "condition_2_rho": true,
+      "condition_3_spectral": true,
+      "all_conditions": true,
+      "transweave_success": true,
+      "scratch_nll": -4.03817914170343,
+      "transweave_nll": -4.0840883391367235
+    }
+  ],
+  "summary": {
+    "n_pairs": 3,
+    "n_transweave_success": 2,
+    "success_rate": 0.6666666666666666
+  }
+}

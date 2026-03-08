@@ -1,0 +1,23 @@
+{
+  "tft": {
+    "A_prior": {
+      "ckpt": "eth_tft_jd_lambda_prior.ckpt",
+      "lambda_prior_weight": 0.05
+    },
+    "B_no_prior": {
+      "ckpt": "eth_tft_jd_lambda0.ckpt",
+      "lambda_prior_weight": 0.0
+    }
+  },
+  "static": {
+    "A_map": {
+      "params_file": "eth_static_jd_params_map.json",
+      "prior_weight": 5000.0
+    },
+    "B_mle": {
+      "params_file": "eth_static_jd_params_mle.json",
+      "prior_weight": 0.0
+    }
+  },
+  "version": "stage8b_v1"
+}

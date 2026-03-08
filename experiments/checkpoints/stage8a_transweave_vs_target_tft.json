@@ -1,0 +1,44 @@
+{
+  "by_target": {
+    "BTC": {
+      "transweave_nll": -4.859865299172082,
+      "target_tft_nll": -4.88798335976826,
+      "delta_nll": 0.02811806059617794,
+      "grade": "good"
+    },
+    "SOL": {
+      "transweave_nll": -4.141790573806109,
+      "target_tft_nll": -4.210760596771158,
+      "delta_nll": 0.06897002296504962,
+      "grade": "acceptable"
+    },
+    "DOGE": {
+      "transweave_nll": -4.0840883391367235,
+      "target_tft_nll": -4.082798419865584,
+      "delta_nll": -0.001289919271139972,
+      "grade": "excellent"
+    }
+  },
+  "grade_spec": [
+    {
+      "max_delta_nll": 0.0,
+      "grade": "excellent"
+    },
+    {
+      "max_delta_nll": 0.05,
+      "grade": "good"
+    },
+    {
+      "max_delta_nll": 0.1,
+      "grade": "acceptable"
+    },
+    {
+      "max_delta_nll": 0.2,
+      "grade": "marginal"
+    },
+    {
+      "max_delta_nll": 999.0,
+      "grade": "poor"
+    }
+  ]
+}
