@@ -1,6 +1,8 @@
 # Raw data (too large, rebuild via Stage 1)
 data/raw/
-data/processed/
+# Ignore processed except onchain (onchain ~4.5MB, included for offline Stage 1)
+data/processed/*
+!data/processed/onchain/
 
 # Internal / non-English (keep repo minimal and English-only)
 .claude/

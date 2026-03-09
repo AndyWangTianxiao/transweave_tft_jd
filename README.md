@@ -36,7 +36,11 @@ cd report && jupyter nbconvert --to pdf --no-input reproduction_report.ipynb
 
 ## Data
 
-Pre-computed features (`data/features/*.npz`) and model checkpoints (`experiments/checkpoints/`) are included. To rebuild data from scratch (requires ccxt + Dune API access):
+Pre-computed features (`data/features/*.npz`), model checkpoints (`experiments/checkpoints/`), and onchain parquet (`data/processed/onchain/*.parquet`, ~4.5MB) are included.
+
+To rebuild from scratch:
+- **With onchain cached** (default): Stage 1 fetches OHLCV via ccxt only; skips Dune if `data/processed/onchain/` exists.
+- **Full rebuild**: `DUNE_API_KEY` + `python scripts/run_stage1.py --force-onchain` to re-fetch onchain from Dune.
 
 ```bash
 python scripts/run_stage1.py
